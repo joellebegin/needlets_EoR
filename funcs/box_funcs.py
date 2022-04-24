@@ -1,10 +1,11 @@
 import numpy as np
+from numpy.fft import fftn
+from scipy.linalg import norm
 
 def load_21cmfast(path):
     try:
         with open(path, "rb") as f:
             numpy_data = np.fromfile(f,dtype=np.float32)
-            print(numpy_data.shape)
     except IOError:
         print('Error While Opening the file!') 
     
@@ -20,12 +21,15 @@ class FourierSpace:
         
         #----------------------------- box specs ------------------------------#
         self.dims = len(box.shape) #dimensions of box
-        self.N = field.shape[0] #number of pixels along one axis
+        self.N = box.shape[0] #number of pixels along one axis
         self.origin = self.N//2 #origin by fft conventions
 
 
         self.delta_k = 2*np.pi/self.L #kspace resolution of 1 pixel
-        self.rmax = (self.n - self.origin)*self.delta_k #max radius
+        self.rmax = (self.N - self.origin)*self.delta_k #max radius
+
+        #------------------------- fourier transform --------------------------#
+        self.box_fourier = fftn(self.box)
     
     
     def grid_dimless(self):
@@ -33,7 +37,11 @@ class FourierSpace:
         Generates a fourier space dimensionless grid, finds 
         radial distance of each pixel from origin.
         '''
+ 
+        self.indices = (np.indices(self.box.shape) - self.origin)
+        self.radii = norm(self.indices, axis = 0) #dimensionless kspace radius of each pix
+        return self.radii
 
-        indices = (np.indices(self.box.shape) - self.origin)
-        self.radii = norm(indices, axis = 0) #dimensionless kspace radius of each pix
+
+
         

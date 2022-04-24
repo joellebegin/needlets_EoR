@@ -1,13 +1,14 @@
 import numpy as np 
+from numpy.fft import fftn, fftshift, ifftn
 from scipy.special import eval_legendre
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-
+from funcs.box_funcs import *
 
 class NeedletFilters:
     '''Adapted from https://github.com/javicarron/mtneedlet'''
 
-    def __init__(self, j, B, kmax):
+    def __init__(self, js, B, kmax):
         '''
         Init function. 
 
@@ -25,7 +26,7 @@ class NeedletFilters:
         kmax : int
             The maximum k mode for which the filters will be constructed.
         '''
-        self.j = j
+        self.js =np.array(js,ndmin=1)
         self. B = B
         self.kmax = kmax
 
@@ -60,28 +61,59 @@ class NeedletFilters:
         return(np.max([0.,b2])) 
         ## np.max in order to avoid negative roots due to precision errors
 
-    def needlet_filters(self):
+    def needlet_filters_1d(self,k_arr=None, j_val = None):
+        '''
+        k_arr: None or array
+            if k_arr==None, will compute for all available k modes.
+            Else, give array of ks you want to compute. 
+
+        j_val: None or int
+            If j_val==None, will compute for all js in self.js. Else,
+            give an int and will compute for a certain j value
+        '''
         
-        ks=np.arange(self.kmax+1)
-        j=np.array(self.j,ndmin=1)
+        if k_arr is not None:
+            ks = k_arr
+        else:
+            ks=np.arange(self.kmax+1)
+
+        
         needs=[]
         bl2=np.vectorize(self.__b2_need)
 
-        for jj in j:
-            xi=(ks/self.B**jj)
+        if j_val is not None:
+            xi=(ks/self.B**j_val)
             bl=np.sqrt(bl2(xi))
             needs.append(bl)
-            
+        
+        else:
+            for j in self.js:
+                    xi=(ks/self.B**j)
+                    bl=np.sqrt(bl2(xi))
+                    needs.append(bl)
+
         return(np.squeeze(needs))
 
+    def needlet_filters_2d(self,j,fourier_radii):
+        filter_2d = []
 
-js = [0,1,2,3]
-Need = NeedletFilters(js, 2, 10)
-filters = Need.needlet_filters()
+        for slice in fourier_radii:
+            filter_2d.append(self.needlet_filters_1d(k_arr=slice,j_val=j))
 
-
-fig, ax = plt.subplots()
-for j in js:
-    ax.plot(filters[j], label = str(j))
+        return np.array(filter_2d)
     
-plt.show()
+
+    def filter_box(self, box, j):
+
+        Fourier = FourierSpace(box)
+        k_grid = Fourier.grid_dimless()
+        filters = self.needlet_filters_2d(j, k_grid)
+
+        fourier_filtered = fftshift(filters)*Fourier.box_fourier
+
+        return ifftn(fourier_filtered)
+    
+
+
+
+
