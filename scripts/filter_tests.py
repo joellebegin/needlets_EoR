@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-from ../funcs.needlet_filters import *
-from ../funcs.box_funcs import *
+from needlet_filters import *
+from box_funcs import *
 
 import matplotlib.patches as patches
 
@@ -9,7 +9,7 @@ import matplotlib.patches as patches
 Some preliminary testing of filter functions on 21cmfast box
 '''
 
-box = load_21cmfast("boxes/delta_T_v3_z006.50_nf0.096743_useTs0_200_300Mpc")
+box = load_21cmfast("../boxes/delta_T_v3_z006.50_nf0.096743_useTs0_200_300Mpc")
 box_slice = box[0]
 
 Fourier = FourierSpace(box_slice)

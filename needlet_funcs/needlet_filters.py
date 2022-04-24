@@ -3,7 +3,7 @@ from numpy.fft import fftn, fftshift, ifftn
 from scipy.special import eval_legendre
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-from funcs.box_funcs import *
+from box_funcs import *
 
 class NeedletFilters:
     '''Adapted from https://github.com/javicarron/mtneedlet'''
