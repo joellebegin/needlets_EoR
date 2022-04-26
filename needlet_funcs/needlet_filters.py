@@ -105,11 +105,11 @@ class NeedletFilters:
 
     def filter_box(self, box, j):
 
-        Fourier = FourierSpace(box)
-        k_grid = Fourier.grid_dimless()
+        boxObj = Box(box,z=6.5) #HARDCODED Z, BAD
+        k_grid = boxObj.grid_dimless()
         filters = self.needlet_filters_2d(j, k_grid)
 
-        fourier_filtered = fftshift(filters)*Fourier.box_fourier
+        fourier_filtered = fftshift(filters)*boxObj.fourier()
 
         return ifftn(fourier_filtered)
     
