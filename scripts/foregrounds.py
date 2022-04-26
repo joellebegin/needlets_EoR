@@ -1,111 +1,115 @@
-from pygsm import GlobalSkyModel2016
-import healpy as hp
-import matplotlib.pyplot as plt
+from foreground_funcs import get_gsm_slice
 import numpy as np
-from functools import partial 
+from box_funcs import *
+from needlet_filters import *
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-# gsm = GlobalSkyModel2016(freq_unit = 'MHz')
-# map = gsm.generate(400)
+box = load_21cmfast("../boxes/delta_T_v3_z006.50_nf0.096743_useTs0_200_300Mpc")
+box_slice = box[0]
+boxObj = Box(box_slice, z = 6.5)
+box_freq = boxObj.nu_obs()
+print(box_freq)
+gsm_slice = get_gsm_slice(box_freq, np.array([45.,45.]), np.array([14.,14.]), sanity_check=True, plot_max = 8000)
 
-len_map = len(map)
-nside = hp.npix2nside(len_map)
-
-# center = hp.ang2pix(nside,np.pi/2,np.pi/2)
-delta_ang = np.array([14.,14.]) #degree
-delta_ang_rad = delta_ang*(np.pi/180)
-center = np.array([np.pi/3,np.pi/3])
-
-bds = np.array([[center[0]-delta_ang_rad[0]/2, center[0]+delta_ang_rad[0]/2],
-                [center[1] - delta_ang_rad[1]/2, center[1] + delta_ang_rad[1]/2]])
-
-# THIS CODE IS DISGUSTING AND I'M ASHAMED
-
-#corners
-ang_bd_0 = np.array([bds[0][0], bds[1][0]]) #top right
-ang_bd_1 = np.array([bds[0][0], bds[1][1]]) #top left
-ang_bd_2 = np.array([bds[0][1], bds[1][0]]) #bottom right
-ang_bd_3 = np.array([bds[0][1], bds[1][1]]) #botoom left
-
-
-cut_width= hp.ang2pix(nside, ang_bd_1[0], ang_bd_1[1] ) - hp.ang2pix(nside, ang_bd_0[0], ang_bd_0[1] )
-
-angs = hp.pix2ang(nside=nside, ipix = np.arange(len_map))
-
-theta_mask1 = angs[0]>bds[0][0]
-theta_mask2 = angs[0]<bds[0][1]
-theta_mask = theta_mask1*theta_mask2
-theta_inds = np.argwhere(theta_mask==1).flatten()
-
-phi_mask1 = angs[1]>bds[1][0]
-phi_mask2 = angs[1]<bds[1][1]
-phi_mask = phi_mask1*phi_mask2
-phi_inds= np.argwhere(phi_mask==1).flatten()
-
-inds = np.intersect1d(theta_inds,phi_inds)
-
-good_pix = hp.ang2pix(nside, angs[0][inds], angs[1][inds])
-cut_map = map[good_pix]
-cut_len = len(cut_map)
-
-#this is so gross I hate it
-# def find_best_divisor(size, low, high, step=1):
-#     minimal_truncation, best_divisor = min((size % divisor, divisor)
-#         for divisor in range(low, high, step))
-#     return best_divisor
-
-# pad = 100
-# divisor = find_best_divisor(cut_len, cut_width - pad, cut_width+pad)
-# cut_map = np.reshape(cut_map, (divisor, cut_len//divisor))
-
-# plt.imshow(cut_map)
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='mollweide')
-
-def mollweid_vec(lat_start,long_start,lat_end,long_end,color,width,headwidth=0.001,headlength=0.001):
-    # proj = hp.projector.MollweideProj()
-    proj = hp.projector.CartesianProj()
-    plt.annotate('', xy=(proj.ang2xy(lat_end, long_end)), xytext=(proj.ang2xy(lat_start, long_start)),   arrowprops=dict(color=color,width=width,headwidth=headwidth,headlength=headlength))
- 
-
-# fig,ax=plt.subplots(nrows=1,ncols=2)
-
-# fig = plt.figure()
-# hp.visufunc.cartview(map, fig=fig, cmap = plt.cm.jet,min=0,max=100)
-
-# w=0.1
-
-# mollweid_vec(ang_bd_0[0],ang_bd_1[0],ang_bd_0[1],ang_bd_1[1],'black',0.1)
-# mollweid_vec(ang_bd_2[0],ang_bd_0[0],ang_bd_2[1],ang_bd_0[1],'black',0.1)
-# mollweid_vec(ang_bd_3[0],ang_bd_2[0],ang_bd_3[1],ang_bd_2[1],'black',0.1)
-# mollweid_vec(ang_bd_1[0],ang_bd_3[0],ang_bd_1[1],ang_bd_3[1],'black',0.1)
-
-
-# im = ax[1].imshow(new_map, cmap = plt.cm.jet)
-
-# hp.projscatter(center, color = "k")
-
-# hp.projscatter(ang_bd_0)
-# hp.projscatter(ang_bd_1)
-# hp.projscatter(ang_bd_2)
-# hp.projscatter(ang_bd_3)
-# hp.graticule()
-
-
- 
-
-
-# for i,j in enumerate(angs[0]):
-#     if theta_mask[i] ==1 and phi_mask[i]==1:
-#         hp.projscatter([angs[0][i],angs[1][i]], color = "k")
-
+added = gsm_slice+box_slice*1e-3
+# plt.imshow(added)
 # plt.show()
 
+plot_boxes=False
+if plot_boxes:
+    fig, ax = plt.subplots(nrows = 1, ncols=2)
+    plt.subplots_adjust(wspace = 0.4)
+    im1=ax[0].imshow(gsm_slice)
+    cbar1 = plt.colorbar(im1, ax = ax[0],fraction=0.046, pad=0.04)
+    cbar1.set_label("Temp [K]")
+    ax[0].set_yticks([])
+    ax[0].set_xticks([])
 
-#check out https://github.com/healpy/healpy/issues/568
+    im2=ax[1].imshow(box_slice)
+    cbar2 = plt.colorbar(im2, ax = ax[1],fraction=0.046, pad=0.04)
+    cbar2.set_label("Temp [mK]")
+    ax[1].set_yticks([])
+    ax[1].set_xticks([])
 
-lonra = [30,40]
-latra = [-10,10]
-npix=200
+    plt.savefig("fgnds_and_21cm.png", bbox_inches="tight")
+    plt.savefig("../docs/april2022/figures/fgnds_and_21cm.pdf", bbox_inches="tight")
 
-proj = hp.projector.CartesianProj(lonra=lonra, latra=latra, coord="G", xsize=npix, ysize=npix)
-reproj = proj.projmap(map, vec2pix_func=partial(hp.vec2pix,nside))
+
+kmax = 200 #max dimless k number == length of box in pixels
+js = np.arange(1,5)
+B1 = 4
+Need1 = NeedletFilters(js, B= B1, kmax=kmax)
+
+
+filtered_fgnds = []
+filtered_21cm = []
+
+for j in tqdm(js):
+    filtered_box = Need1.filter_box(gsm_slice,j)
+    filtered_fgnds.append(np.real(filtered_box))
+
+    filtered_box = Need1.filter_box(box_slice,j)
+    filtered_21cm.append(np.real(filtered_box))
+
+
+from matplotlib.colors import SymLogNorm
+
+
+
+nrow = 2
+ncol=5
+fig, ax = plt.subplots(figsize = (8.5,4), nrows = 2,ncols=5, gridspec_kw=dict(wspace=0.5, hspace=0.0,
+                     top=1. - 0.5 / (nrow + 1), bottom=0.5 / (nrow + 1),
+                     left=0.5 / (ncol + 1), right=1 - 0.5 / (ncol + 1)))
+
+
+im1 = ax[0,0].imshow(gsm_slice)
+ax[0,0].set_xticklabels([])
+ax[0,0].set_yticklabels([])
+cbar1 = plt.colorbar(im1, ax = ax[0,0],fraction=0.046, pad=0.04)
+
+
+im2 = ax[1,0].imshow(box_slice)
+ax[1,0].set_xticklabels([])
+ax[1,0].set_yticklabels([])
+cbar1 = plt.colorbar(im2, ax = ax[1,0],fraction=0.046, pad=0.04)
+
+
+plt.subplots_adjust(wspace=0.6,hspace=0)
+
+ims = []
+ims2 = []
+cbars = []
+for i in range(4):
+    
+    norm = SymLogNorm(1,vmin=np.min(filtered_fgnds[i]),vmax=np.max(filtered_fgnds[i]))
+    ims.append(ax[0,i+1].imshow(filtered_fgnds[i],cmap = plt.cm.RdBu, norm=norm))
+    ax[0,i+1].set_xticklabels([])
+    ax[0,i+1].set_yticklabels([])
+
+    
+    ax[0,i+1].tick_params(color=f'C{i}', labelcolor=f'C{i}')
+    for spine in ax[0,i+1].spines.values():
+        spine.set_edgecolor(f'C{i}')
+        spine.set_linewidth(3)
+
+    norm = SymLogNorm(1,vmin=np.min(filtered_21cm[i]),vmax=np.max(filtered_21cm[i]))
+    ims2.append(ax[1,i+1].imshow(filtered_21cm[i],cmap = plt.cm.RdBu, norm=norm))
+    ax[1,i+1].set_xticklabels([])
+    ax[1,i+1].set_yticklabels([])
+
+    
+    ax[1,i+1].tick_params(color=f'C{i}', labelcolor=f'C{i}')
+    for spine in ax[1,i+1].spines.values():
+        spine.set_edgecolor(f'C{i}')
+        spine.set_linewidth(3)
+
+    
+
+for i in range(4):
+    plt.colorbar(ims[i], ax = ax[0,i+1],fraction=0.046, pad=0.04)
+    plt.colorbar(ims2[i], ax = ax[1,i+1],fraction=0.046, pad=0.04)
+
+plt.savefig("figures/filtered_fgnds.png", bbox_inches = "tight")
+plt.savefig("../docs/april2022/figures/filtered_fgnds.pdf", bbox_inches = "tight")

@@ -9,6 +9,8 @@ import matplotlib.patches as patches
 Some preliminary testing of filter functions on 21cmfast box
 '''
 
+#OUTDATED, SOME METHODS HAVE BEEN CHANGED
+
 box = load_21cmfast("../boxes/delta_T_v3_z006.50_nf0.096743_useTs0_200_300Mpc")
 box_slice = box[0]
 
