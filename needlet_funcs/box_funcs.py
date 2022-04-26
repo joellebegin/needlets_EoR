@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.fft import fftn
 from scipy.linalg import norm
+from astropy.cosmology import Planck15
 
 def load_21cmfast(path):
     try:
@@ -11,13 +12,16 @@ def load_21cmfast(path):
     
     return numpy_data.reshape((200,200,200))
 
-class FourierSpace:
+class Box:
 
-    def __init__(self, box,L=300):
+    def __init__(self, box,z,L=300):
 
         #initializing some attributes
         self.box = box
         self.L = L
+        self.z = z
+
+        self.NU_21 = 1420 #MHz
         
         #----------------------------- box specs ------------------------------#
         self.dims = len(box.shape) #dimensions of box
@@ -29,8 +33,14 @@ class FourierSpace:
         self.rmax = (self.N - self.origin)*self.delta_k #max radius
 
         #------------------------- fourier transform --------------------------#
-        self.box_fourier = fftn(self.box)
+        
     
+    #======================= fourier functions ====================#
+    def fourier(self, ret = True):
+        self.box_fourier = fftn(self.box)
+        
+        if ret:
+            return self.box_fourier
     
     def grid_dimless(self):
         '''
@@ -42,6 +52,14 @@ class FourierSpace:
         self.radii = norm(self.indices, axis = 0) #dimensionless kspace radius of each pix
         return self.radii
 
+
+    #====================== cosmo functions =====================#
+    def angle_subtended(self):
+        DA = Planck15.angular_diameter_distance(self.z)
+        return (self.L*180)/(DA*np.pi)
+
+    def nu_obs(self):
+        return self.NU_21/(1 + self.z)
 
 
         
